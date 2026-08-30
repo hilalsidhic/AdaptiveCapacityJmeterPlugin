@@ -42,4 +42,15 @@ class ResultAccumulatorTest {
 
         assertEquals(0L, stage.sampleCount);
     }
+
+    @Test
+    void qpsUsesTheConfiguredWindowSeconds() {
+        ResultAccumulator accumulator = new ResultAccumulator();
+        accumulator.recordLatency(50L);
+        accumulator.recordLatency(60L);
+
+        StageResult stage = accumulator.calculateAndReset(new P95Calculator(), 2.0d);
+
+        assertEquals(1.0d, stage.qps, 0.001d);
+    }
 }

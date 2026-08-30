@@ -1,6 +1,8 @@
 # Adaptive Capacity JMeter Plugin
 
-A JMeter backend-listener plugin that monitors sampler performance across time windows and stops a test when configured degradation thresholds are exceeded.
+A JMeter listener-style plugin that monitors sampler performance across time windows and stops a test when configured degradation thresholds are exceeded.
+
+This version is implemented as a listener plugin rather than a sampler, so it is designed to observe the load that is already running in JMeter. The menu entry is meant to show up as a JMeter listener component, using the default listener UI styling instead of a grey custom sampler icon.
 
 The plugin supports multiple policies at the same time and evaluates them together without a switch-based branching model.
 
@@ -13,7 +15,7 @@ The plugin supports multiple policies at the same time and evaluates them togeth
 
 ## How it works
 
-- JMeter sends sample results to the backend listener.
+- JMeter sends sample results to the listener.
 - The plugin groups results by sampler label.
 - It tracks per-sampler stage metrics over a configured interval.
 - It compares the current stage to the previous stage.
@@ -21,10 +23,12 @@ The plugin supports multiple policies at the same time and evaluates them togeth
 
 ## Project structure
 
-- `src/main/java/org/example/jmeter/AdaptiveCapacityBackendListener.java` - JMeter backend listener entry point
+- `src/main/java/org/example/jmeter/AdaptiveCapacityListenerGui.java` - listener GUI and monitoring logic
+- `src/main/java/org/example/jmeter/AdaptiveCapacityListenerTestElement.java` - JMeter test element properties
+- `src/main/java/org/example/jmeter/AdaptiveCapacityMenuCreator.java` - menu item registration for the plugin
 - `src/main/java/org/example/jmeter/AdaptiveCapacityState.java` - stage tracking and multi-policy evaluation
 - `src/main/java/org/example/core/degradation/*` - degradation policy implementations
-- `src/main/resources/META-INF/services/org.apache.jmeter.visualizers.backend.BackendListenerClient` - JMeter service registration
+- `src/main/resources/META-INF/services/org.apache.jmeter.gui.plugin.MenuCreator` - menu registration entry
 - `src/test/java/*` - unit tests
 
 ## Prerequisites
@@ -57,7 +61,27 @@ cp build/libs/AdaptiveCapacityJmeterPlugin-1.0-SNAPSHOT.jar /path/to/apache-jmet
 
 Then restart JMeter.
 
-## Use in JMeter
+## Use the plugin in JMeter
+
+After restarting JMeter:
+
+1. Open the JMeter test plan.
+2. Use the menu item created by the plugin to add the listener, or add the listener through the menu entry registered by the plugin.
+3. Configure the thresholds and policies in the listener UI.
+4. Run the test with a Thread Group or load profile already driving traffic.
+
+Typical configuration values:
+
+```text
+policyModes = PERCENT_LATENCY,ABSOLUTE_LATENCY,ERROR_RATE,ERROR_COUNT
+evaluationIntervalSeconds = 10
+degradationPercentThreshold = 20.0
+absoluteLatencyThresholdMs = 1000
+errorRateThresholdPercent = 5.0
+errorCountThreshold = 10
+```
+
+## Use in JMeter (backend listener alternative)
 
 1. Open JMeter.
 2. Add a Thread Group.

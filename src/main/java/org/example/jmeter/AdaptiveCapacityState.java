@@ -29,20 +29,26 @@ public class AdaptiveCapacityState {
     private final Map<AdaptiveCapacityPolicy, DegradationPolicy> activePolicies;
     private final double errorRateThresholdPercent;
     private final long errorCountThreshold;
+    private final double stageWindowSeconds;
     private boolean lastThresholdExceeded = false;
 
     public AdaptiveCapacityState() {
-        this(10.0d, Set.of(AdaptiveCapacityPolicy.PERCENT_LATENCY, AdaptiveCapacityPolicy.ABSOLUTE_LATENCY, AdaptiveCapacityPolicy.ERROR_RATE), 2000L, 5.0d, 10L);
+        this(10.0d, Set.of(AdaptiveCapacityPolicy.PERCENT_LATENCY, AdaptiveCapacityPolicy.ABSOLUTE_LATENCY, AdaptiveCapacityPolicy.ERROR_RATE), 2000L, 5.0d, 10L, 60.0d);
     }
 
     public AdaptiveCapacityState(double thresholdPercent) {
-        this(thresholdPercent, Set.of(AdaptiveCapacityPolicy.PERCENT_LATENCY, AdaptiveCapacityPolicy.ABSOLUTE_LATENCY, AdaptiveCapacityPolicy.ERROR_RATE), 2000L, 5.0d, 10L);
+        this(thresholdPercent, Set.of(AdaptiveCapacityPolicy.PERCENT_LATENCY, AdaptiveCapacityPolicy.ABSOLUTE_LATENCY, AdaptiveCapacityPolicy.ERROR_RATE), 2000L, 5.0d, 10L, 60.0d);
     }
 
     public AdaptiveCapacityState(double thresholdPercent, Set<AdaptiveCapacityPolicy> activePolicies, long absoluteLatencyThresholdMs, double errorRateThresholdPercent, long errorCountThreshold) {
+        this(thresholdPercent, activePolicies, absoluteLatencyThresholdMs, errorRateThresholdPercent, errorCountThreshold, 60.0d);
+    }
+
+    public AdaptiveCapacityState(double thresholdPercent, Set<AdaptiveCapacityPolicy> activePolicies, long absoluteLatencyThresholdMs, double errorRateThresholdPercent, long errorCountThreshold, double stageWindowSeconds) {
         this.percentileCalculator = new P95Calculator();
         this.errorRateThresholdPercent = errorRateThresholdPercent;
         this.errorCountThreshold = errorCountThreshold;
+        this.stageWindowSeconds = stageWindowSeconds > 0 ? stageWindowSeconds : 1.0d;
         this.activePolicies = buildPolicyMap(thresholdPercent, activePolicies, absoluteLatencyThresholdMs, errorRateThresholdPercent, errorCountThreshold);
     }
 
@@ -79,6 +85,12 @@ public class AdaptiveCapacityState {
     }
 
     public void accept(String samplerName, long latencyMs, boolean success) {
+        if (latencyMs < 0L) {
+            return;
+        }
+        if (latencyMs == 0L && success) {
+            return;
+        }
         ResultAccumulator accumulator = resultAccumulators.computeIfAbsent(samplerName, ignored -> new ResultAccumulator());
         accumulator.recordLatency(latencyMs, success);
     }
@@ -90,8 +102,22 @@ public class AdaptiveCapacityState {
 
         for (Map.Entry<String, ResultAccumulator> entry : new HashMap<>(resultAccumulators).entrySet()) {
             String samplerName = entry.getKey();
-            StageResult currentResult = entry.getValue().calculateAndReset(this.percentileCalculator);
+            StageResult currentResult = entry.getValue().calculateAndReset(this.percentileCalculator, this.stageWindowSeconds);
             currentResult.samplerName = samplerName;
+
+            if (currentResult.sampleCount == 0L) {
+                resultAccumulators.remove(samplerName);
+                previousResults.remove(samplerName);
+                continue;
+            }
+
+            if (currentResult.sampleCount < 2L && previousResults.containsKey(samplerName)) {
+                StageResult previous = previousResults.get(samplerName);
+                if (previous != null) {
+                    currentResults.put(samplerName, previous);
+                }
+                continue;
+            }
 
             StageResult previous = previousSnapshot.get(samplerName);
             if (!activePolicies.isEmpty() && previous != null) {
@@ -115,6 +141,10 @@ public class AdaptiveCapacityState {
         return lastThresholdExceeded;
     }
 
+    public synchronized Set<AdaptiveCapacityPolicy> getActivePolicies() {
+        return Collections.unmodifiableSet(activePolicies.keySet());
+    }
+
     public synchronized StageResult finishStage() {
         return finishStage("unknown");
     }
@@ -130,8 +160,13 @@ public class AdaptiveCapacityState {
             samplerName = fallback;
         }
 
-        StageResult currentResult = accumulator.calculateAndReset(this.percentileCalculator);
+        StageResult currentResult = accumulator.calculateAndReset(this.percentileCalculator, this.stageWindowSeconds);
         currentResult.samplerName = samplerName;
+        if (currentResult.sampleCount == 0L) {
+            resultAccumulators.remove(samplerName);
+            previousResults.remove(samplerName);
+            return currentResult;
+        }
         previousResults.put(samplerName, currentResult);
         return currentResult;
     }

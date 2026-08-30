@@ -35,6 +35,10 @@ public class ResultAccumulator {
     }
 
     public StageResult calculateAndReset(PercentileCalculator pc) {
+        return calculateAndReset(pc, 60.0d);
+    }
+
+    public StageResult calculateAndReset(PercentileCalculator pc, double windowSeconds) {
         List<Long> snapshot;
         long count;
         long errors;
@@ -51,7 +55,8 @@ public class ResultAccumulator {
         }
 
         long curr = pc.calculate(snapshot);
-        double qps = count / 60.0d;
+        double normalizedWindow = windowSeconds > 0 ? windowSeconds : 1.0d;
+        double qps = count / normalizedWindow;
         double errorRate = count == 0 ? 0.0d : ((double) errors / count) * 100.0d;
         return new StageResult("", curr, count, qps, errors, errorRate);
     }

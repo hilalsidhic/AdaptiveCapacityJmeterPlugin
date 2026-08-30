@@ -24,9 +24,11 @@ dependencies {
 
     testImplementation("org.apache.jmeter:ApacheJMeter_core:5.6.3")
     testImplementation("org.apache.jmeter:ApacheJMeter_components:5.6.3")
+    testImplementation("org.apache.jmeter:ApacheJMeter_java:5.6.3")
 
     compileOnly("org.apache.jmeter:ApacheJMeter_core:5.6.3")
     compileOnly("org.apache.jmeter:ApacheJMeter_components:5.6.3")
+    compileOnly("org.apache.jmeter:ApacheJMeter_java:5.6.3")
     compileOnly("org.apache.logging.log4j:log4j-api:2.20.0")
     compileOnly("org.apache.logging.log4j:log4j-core:2.20.0")
 }

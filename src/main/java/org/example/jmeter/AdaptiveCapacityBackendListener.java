@@ -10,10 +10,10 @@ import org.example.core.model.StageResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,7 +53,7 @@ public final class AdaptiveCapacityBackendListener extends AbstractBackendListen
     @Override
     public void setupTest(BackendListenerContext context) {
         readConfiguration(context);
-        state = new AdaptiveCapacityState(degradationPercentThreshold, policyModes, absoluteLatencyThresholdMs, errorRateThresholdPercent, errorCountThreshold);
+        state = new AdaptiveCapacityState(degradationPercentThreshold, policyModes, absoluteLatencyThresholdMs, errorRateThresholdPercent, errorCountThreshold, evaluationIntervalMs / 1000.0d);
         stopIssued = false;
         lastWindowMillis = System.currentTimeMillis();
         log.info("AdaptiveCapacity initialized. policies={} interval={}s degradation={}%, absoluteLatency={}ms errorRate={}%, errorCount={} labels={}",
@@ -111,7 +111,7 @@ public final class AdaptiveCapacityBackendListener extends AbstractBackendListen
 
             boolean thresholdReached = state.wasThresholdExceeded();
             if (thresholdReached) {
-                stopTestAndReport(summary.toString());
+                stopTestAndReport(report, summary.toString());
             } else {
                 log.info("AdaptiveCapacity window summary: {}", summary);
             }
@@ -188,12 +188,17 @@ public final class AdaptiveCapacityBackendListener extends AbstractBackendListen
         ) : policies;
     }
 
-    private void stopTestAndReport(String summary) {
+    private void stopTestAndReport(Map<String, StageResult> report, String summary) {
         if (stopIssued) {
             return;
         }
 
         stopIssued = true;
+        SampleResult stopSample = buildStopSample(report, summary);
+        if (JMeterContextService.getContext() != null) {
+            JMeterContextService.getContext().setPreviousResult(stopSample);
+        }
+
         try {
             if (JMeterContextService.getContext() != null && JMeterContextService.getContext().getEngine() != null) {
                 JMeterContextService.getContext().getEngine().stopTest();
@@ -202,7 +207,25 @@ public final class AdaptiveCapacityBackendListener extends AbstractBackendListen
             log.error("AdaptiveCapacity plugin could not stop the test cleanly", e);
         }
 
-        log.warn("AdaptiveCapacity stop trigger. policies={} current window: {}", policyModes, summary);
+        log.warn("AdaptiveCapacity stop trigger. policies={} current window: {} reason={}", policyModes, summary, stopSample.getResponseMessage());
+    }
+
+    private SampleResult buildStopSample(Map<String, StageResult> report, String summary) {
+        String message = buildStopReason(report, summary);
+        SampleResult stopSample = new SampleResult(0L, 0L);
+        stopSample.setSampleLabel("AdaptiveCapacity stop trigger");
+        stopSample.setSuccessful(false);
+        stopSample.setResponseCode("ADAPTIVE_CAPACITY_STOP");
+        stopSample.setResponseMessage(message);
+        stopSample.setResponseData(message.getBytes(StandardCharsets.UTF_8));
+        stopSample.setDataType(SampleResult.TEXT);
+        return stopSample;
+    }
+
+    private String buildStopReason(Map<String, StageResult> report, String summary) {
+        double peakQps = report.values().stream().mapToDouble(result -> result.qps).max().orElse(0.0d);
+        long peakLatency = report.values().stream().mapToLong(result -> result.currentLatency).max().orElse(0L);
+        return "AdaptiveCapacity stop triggered. threshold breach detected; peakLatency=" + peakLatency + "ms; peakQps=" + peakQps + "; activePolicies=" + policyModes + "; details=" + summary;
     }
 
     private String reportToString(Map<String, StageResult> report) {
