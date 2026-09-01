@@ -4,7 +4,7 @@ plugins {
     id("jacoco")
 }
 
-group = "org.example"
+group = "io.github.hilalsidhic"
 version = "1.0-SNAPSHOT"
 
 java {
@@ -42,7 +42,7 @@ tasks.jacocoTestReport {
     dependsOn(tasks.test)
     classDirectories.setFrom(
         files(sourceSets.main.get().output.asFileTree.matching {
-            exclude("org/example/jmeter/**", "org/example/Main.class", "org/example/core/accumulator/**", "org/example/core/model/**")
+            exclude("io/github/hilalsidhic/jmeter/**", "io/github/hilalsidhic/Main.class", "io/github/hilalsidhic/core/accumulator/**", "io/github/hilalsidhic/core/model/**")
         })
     )
     reports {
@@ -55,7 +55,7 @@ tasks.jacocoTestCoverageVerification {
     dependsOn(tasks.test)
     classDirectories.setFrom(
         files(sourceSets.main.get().output.asFileTree.matching {
-            exclude("org/example/jmeter/**", "org/example/Main.class", "org/example/core/accumulator/**", "org/example/core/model/**")
+            exclude("io/github/hilalsidhic/jmeter/**", "io/github/hilalsidhic/Main.class", "io/github/hilalsidhic/core/accumulator/**", "io/github/hilalsidhic/core/model/**")
         })
     )
     violationRules {

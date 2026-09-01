@@ -23,11 +23,11 @@ The plugin supports multiple policies at the same time and evaluates them togeth
 
 ## Project structure
 
-- `src/main/java/org/example/jmeter/AdaptiveCapacityListenerGui.java` - listener GUI and monitoring logic
-- `src/main/java/org/example/jmeter/AdaptiveCapacityListenerTestElement.java` - JMeter test element properties
-- `src/main/java/org/example/jmeter/AdaptiveCapacityMenuCreator.java` - menu item registration for the plugin
-- `src/main/java/org/example/jmeter/AdaptiveCapacityState.java` - stage tracking and multi-policy evaluation
-- `src/main/java/org/example/core/degradation/*` - degradation policy implementations
+- `src/main/java/io/github/hilalsidhic/jmeter/AdaptiveCapacityListenerGui.java` - listener GUI and monitoring logic
+- `src/main/java/io/github/hilalsidhic/jmeter/AdaptiveCapacityListenerTestElement.java` - JMeter test element properties
+- `src/main/java/io/github/hilalsidhic/jmeter/AdaptiveCapacityMenuCreator.java` - menu item registration for the plugin
+- `src/main/java/io/github/hilalsidhic/jmeter/AdaptiveCapacityState.java` - stage tracking and multi-policy evaluation
+- `src/main/java/io/github/hilalsidhic/core/degradation/*` - degradation policy implementations
 - `src/main/resources/META-INF/services/org.apache.jmeter.gui.plugin.MenuCreator` - menu registration entry
 - `src/test/java/*` - unit tests
 
@@ -88,7 +88,7 @@ errorCountThreshold = 10
 3. Add HTTP Request(s) or any sampler you want to monitor.
 4. Add a Backend Listener.
 5. Select the class:
-   - `org.example.jmeter.AdaptiveCapacityBackendListener`
+   - `io.github.hilalsidhic.jmeter.AdaptiveCapacityBackendListener`
 6. Configure the parameters:
 
 ```text
