@@ -48,7 +48,7 @@ From the project root:
 This creates the plugin jar at:
 
 ```bash
-build/libs/AdaptiveCapacityJmeterPlugin-1.0-SNAPSHOT.jar
+build/libs/AdaptiveCapacityJmeterPlugin-1.0.0.jar
 ```
 
 ## Install into JMeter
@@ -56,7 +56,7 @@ build/libs/AdaptiveCapacityJmeterPlugin-1.0-SNAPSHOT.jar
 Copy the jar into your JMeter installation:
 
 ```bash
-cp build/libs/AdaptiveCapacityJmeterPlugin-1.0-SNAPSHOT.jar /path/to/apache-jmeter-5.6.3/lib/ext/
+cp build/libs/AdaptiveCapacityJmeterPlugin-1.0.0.jar /path/to/apache-jmeter-5.6.3/lib/ext/
 ```
 
 Then restart JMeter.
